@@ -6,12 +6,14 @@ import com.example.SpringSecuriryProject.security.JWTUtil;
 import com.example.SpringSecuriryProject.service.RegistrationService;
 import com.example.SpringSecuriryProject.util.UserValidator;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ public class AuthController {
     private final UserValidator userValidator;
     private final RegistrationService registrationService;
     private final JWTUtil jwtUtil;
-    private final ModelMap modelMap;
+    private final ModelMapper modelMapper;
 
     @GetMapping("/login")
     public String loginPage() {
@@ -33,16 +35,20 @@ public class AuthController {
     }
 
     @PostMapping("/registration")
-    public String performRegistration(@RequestBody @Valid UserDto userDto,
-                                      BindingResult bindingResult) {
+    public Map<String, String> performRegistration(@RequestBody @Valid UserDto userDto, BindingResult bindingResult) {
+        User user = convertToUser(userDto);
         userValidator.validate(user, bindingResult);
 
         if (bindingResult.hasErrors())
-            return "/auth/registration";
+            return Map.of("message", "Ошибка");
 
         registrationService.register(user);
 
-        return "redirect:/auth/login";
+        String token = jwtUtil.generateToken(user.getUsername());
+        return Map.of("jwt-token", token);
     }
-    public User conver
+
+    public User convertToUser(UserDto userDto) {
+        return this.modelMapper.map(userDto, User.class);
+    }
 }
